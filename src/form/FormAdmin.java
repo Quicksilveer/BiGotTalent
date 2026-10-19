@@ -15,17 +15,23 @@ public class FormAdmin extends javax.swing.JFrame {
     }
 
     public void loadDataPendaftar() {
-        model = new DefaultTableModel();
+        model = new DefaultTableModel() {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // ubah status lewat tombol, bukan edit langsung di tabel
+            }
+        };
         model.addColumn("ID");
         model.addColumn("Nama Siswa");
         model.addColumn("Mata Lomba");
         model.addColumn("Status Tahapan");
+        model.addColumn("Hasil Juri");
         tblPendaftar.setModel(model);
 
         try {
             Connection c = Koneksi.configDB();
             Statement s = c.createStatement();
-            String sql = "SELECT pendaftaran.id, users.username, lomba.nama_lomba, pendaftaran.status " +
+            String sql = "SELECT pendaftaran.id, users.username, lomba.nama_lomba, pendaftaran.status, pendaftaran.hasil " +
                          "FROM pendaftaran " +
                          "JOIN users ON pendaftaran.user_id = users.id " +
                          "JOIN lomba ON pendaftaran.lomba_id = lomba.id";
@@ -35,7 +41,8 @@ public class FormAdmin extends javax.swing.JFrame {
                     r.getString("id"),
                     r.getString("username"),
                     r.getString("nama_lomba"),
-                    r.getString("status")
+                    r.getString("status"),
+                    r.getString("hasil") == null ? "Belum dinilai" : r.getString("hasil")
                 });
             }
         } catch (Exception e) {
@@ -131,11 +138,17 @@ public class FormAdmin extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnSimpanLombaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSimpanLombaActionPerformed
+        String namaLomba = txtNamaLomba.getText().trim();
+        if (namaLomba.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama lomba tidak boleh kosong!");
+            txtNamaLomba.requestFocus();
+            return;
+        }
         try {
             Connection c = Koneksi.configDB();
-            Statement s = c.createStatement();
-            String sql = "INSERT INTO lomba (nama_lomba) VALUES ('" + txtNamaLomba.getText() + "')";
-            s.executeUpdate(sql);
+            PreparedStatement ps = c.prepareStatement("INSERT INTO lomba (nama_lomba) VALUES (?)");
+            ps.setString(1, namaLomba);
+            ps.executeUpdate();
             JOptionPane.showMessageDialog(this, "Mata Lomba berhasil ditambahkan!");
             txtNamaLomba.setText("");
         } catch (Exception e) {
@@ -155,9 +168,10 @@ public class FormAdmin extends javax.swing.JFrame {
         if (statusBaru != null && !statusBaru.trim().isEmpty()) {
             try {
                 Connection c = Koneksi.configDB();
-                Statement s = c.createStatement();
-                String sql = "UPDATE pendaftaran SET status='" + statusBaru + "' WHERE id='" + idPendaftaran + "'";
-                s.executeUpdate(sql);
+                PreparedStatement ps = c.prepareStatement("UPDATE pendaftaran SET status=? WHERE id=?");
+                ps.setString(1, statusBaru.trim());
+                ps.setString(2, idPendaftaran);
+                ps.executeUpdate();
                 JOptionPane.showMessageDialog(this, "Status berhasil diperbarui!");
                 loadDataPendaftar();
             } catch (Exception e) {

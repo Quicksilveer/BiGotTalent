@@ -13,6 +13,8 @@ public class FormSiswa extends javax.swing.JFrame {
         this.idLoginSiswa = idUser;
         loadPilihanLomba();
         cekStatusSiswa();
+        pack(); // supaya label status yang lebih panjang tidak terpotong
+        setLocationRelativeTo(null);
     }
 
     private void loadPilihanLomba() {
@@ -36,7 +38,25 @@ public class FormSiswa extends javax.swing.JFrame {
             ResultSet r = s.executeQuery("SELECT * FROM pendaftaran WHERE user_id='" + idLoginSiswa + "'");
             if (r.next()) {
                 String status = r.getString("status");
-                lblStatus.setText("Status Tahapan Anda: " + status);
+                String hasil = r.getString("hasil");
+                String catatan = r.getString("catatan_juri");
+
+                if (hasil == null) {
+                    lblStatus.setText("Status Tahapan Anda: " + status + " | Hasil Juri: Belum dinilai");
+                } else {
+                    lblStatus.setText("Status Tahapan Anda: " + status + " | Hasil Juri: " + hasil);
+
+                    // Pemberitahuan hasil penilaian juri (muncul setelah dashboard tampil)
+                    String pesan = "PEMBERITAHUAN DARI JURI\n\nHasil penilaian Anda: " + hasil.toUpperCase();
+                    if (catatan != null && !catatan.trim().isEmpty()) {
+                        pesan += "\n\nCatatan Juri:\n" + catatan;
+                    }
+                    final String pesanFinal = pesan;
+                    final int tipe = hasil.equals("Lolos")
+                            ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE;
+                    java.awt.EventQueue.invokeLater(() ->
+                            JOptionPane.showMessageDialog(this, pesanFinal, "Hasil Penilaian Juri", tipe));
+                }
             } else {
                 lblStatus.setText("Status Tahapan Anda: Belum Mendaftarkan Diri");
             }
@@ -111,6 +131,10 @@ public class FormSiswa extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnDaftarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDaftarActionPerformed
+        if (cmbLomba.getSelectedItem() == null) {
+            JOptionPane.showMessageDialog(this, "Belum ada mata lomba yang bisa dipilih!");
+            return;
+        }
         try {
             String selectedItem = cmbLomba.getSelectedItem().toString();
             String idLomba = selectedItem.split(" - ")[0]; // Ambil ID lomba di depan

@@ -2,8 +2,8 @@ package form;
 
 import koneksi.Koneksi;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import javax.swing.JOptionPane;
 
 public class FormLogin extends javax.swing.JFrame {
@@ -93,11 +93,12 @@ public class FormLogin extends javax.swing.JFrame {
     private void btnLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoginActionPerformed
         try {
             Connection c = Koneksi.configDB();
-            Statement s = c.createStatement();
-
-            String sql = "SELECT * FROM users WHERE username='" + txtUsername.getText()
-                    + "' AND password='" + txtPassword.getText() + "'";
-            ResultSet r = s.executeQuery(sql);
+            // PreparedStatement supaya input berisi tanda petik tidak bisa membobol login (SQL injection)
+            PreparedStatement ps = c.prepareStatement(
+                    "SELECT * FROM users WHERE username=? AND password=?");
+            ps.setString(1, txtUsername.getText());
+            ps.setString(2, new String(txtPassword.getPassword()));
+            ResultSet r = ps.executeQuery();
 
             if (r.next()) {
                 String role = r.getString("role");
@@ -110,6 +111,10 @@ public class FormLogin extends javax.swing.JFrame {
                 } else if (role.equals("siswa")) {
                     JOptionPane.showMessageDialog(this, "Login Berhasil sebagai Siswa!");
                     new FormSiswa(idUser).setVisible(true);
+                    this.dispose();
+                } else if (role.equals("juri")) {
+                    JOptionPane.showMessageDialog(this, "Login Berhasil sebagai Juri!");
+                    new FormJuri().setVisible(true);
                     this.dispose();
                 }
             } else {
